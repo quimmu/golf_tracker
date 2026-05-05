@@ -1,0 +1,1590 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a3d2e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="민재 골프">
+<title>민재 골프 트래커</title>
+
+<!-- PWA Manifest (inline) -->
+<link rel="manifest" href='data:application/manifest+json;charset=utf-8,{"name":"민재 골프 트래커","short_name":"민재골프","start_url":"./","display":"standalone","orientation":"portrait","background_color":"%230a3d2e","theme_color":"%230a3d2e","icons":[{"src":"data:image/svg%2Bxml;utf8,%3Csvg xmlns%3D%22http%3A//www.w3.org/2000/svg%22 viewBox%3D%220 0 192 192%22%3E%3Crect width%3D%22192%22 height%3D%22192%22 fill%3D%22%230a3d2e%22 rx%3D%2240%22/%3E%3Ctext x%3D%2296%22 y%3D%22130%22 font-size%3D%22120%22 text-anchor%3D%22middle%22 fill%3D%22%23d4af37%22 font-family%3D%22serif%22 font-weight%3D%22bold%22%3E⛳%3C/text%3E%3C/svg%3E","sizes":"192x192","type":"image/svg+xml"}]}'>
+
+<!-- iOS Apple Touch Icon -->
+<link rel="apple-touch-icon" href='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" fill="%230a3d2e" rx="40"/><text x="96" y="130" font-size="120" text-anchor="middle" fill="%23d4af37" font-family="serif" font-weight="bold">⛳</text></svg>'>
+
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  :root {
+    --bg-deep: #0a1f17;
+    --bg-card: #122e22;
+    --bg-elev: #1a3d2e;
+    --green-fairway: #2d6a4f;
+    --green-mid: #40916c;
+    --green-light: #74c69d;
+    --gold: #d4af37;
+    --gold-soft: #e8c97a;
+    --cream: #f4ead5;
+    --text-primary: #f4ead5;
+    --text-secondary: #a8b5a0;
+    --text-muted: #6b7d6f;
+    --score-eagle: #1a936f;
+    --score-birdie: #74c69d;
+    --score-par: #95d5b2;
+    --score-bogey: #f4d35e;
+    --score-double: #ee964b;
+    --score-triple: #e63946;
+    --shadow-soft: 0 4px 24px rgba(0,0,0,0.3);
+    --shadow-elev: 0 12px 40px rgba(0,0,0,0.5);
+  }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  body {
+    font-family: -apple-system, 'SF Pro Display', 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    user-select: none;
+    -webkit-user-select: none;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  #app {
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Background pattern - subtle grass texture */
+  #app::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(circle at 20% 30%, rgba(64, 145, 108, 0.08) 0%, transparent 50%),
+      radial-gradient(circle at 80% 70%, rgba(212, 175, 55, 0.05) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ============ HEADER ============ */
+  .header {
+    flex-shrink: 0;
+    padding: 16px 20px 12px;
+    background: linear-gradient(180deg, var(--bg-deep) 0%, transparent 100%);
+    z-index: 10;
+    position: relative;
+  }
+
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .brand {
+    font-family: 'Georgia', serif;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--gold);
+  }
+
+  .brand .accent {
+    color: var(--green-light);
+  }
+
+  .menu-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--bg-elev);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    color: var(--gold);
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .round-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .round-date {
+    font-weight: 500;
+  }
+
+  .round-course {
+    font-style: italic;
+    color: var(--gold-soft);
+  }
+
+  /* ============ MAIN VIEWS ============ */
+  .view {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    position: relative;
+    z-index: 1;
+    display: none;
+  }
+
+  .view.active {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ============ HOLE INPUT VIEW ============ */
+  .hole-display {
+    text-align: center;
+    padding: 8px 20px 20px;
+  }
+
+  .hole-num-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
+  .hole-number {
+    font-family: 'Georgia', serif;
+    font-size: 96px;
+    font-weight: 700;
+    line-height: 0.9;
+    color: var(--gold);
+    text-shadow: 0 4px 20px rgba(212, 175, 55, 0.3);
+  }
+
+  .hole-par {
+    font-size: 16px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+    letter-spacing: 1px;
+  }
+
+  .hole-par .par-num {
+    color: var(--green-light);
+    font-weight: 700;
+  }
+
+  .hole-par-edit {
+    display: inline-flex;
+    gap: 8px;
+    margin-top: 8px;
+    align-items: center;
+  }
+
+  .par-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: var(--bg-elev);
+    border: 1px solid rgba(116, 198, 157, 0.3);
+    color: var(--green-light);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ============ SCORE INPUTS ============ */
+  .score-section {
+    padding: 0 20px 12px;
+  }
+
+  .input-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    text-align: center;
+  }
+
+  .score-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+
+  .score-btn {
+    aspect-ratio: 1;
+    border-radius: 12px;
+    background: var(--bg-card);
+    border: 1.5px solid rgba(116, 198, 157, 0.15);
+    color: var(--text-primary);
+    font-size: 22px;
+    font-weight: 600;
+    font-family: 'Georgia', serif;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .score-btn:active {
+    transform: scale(0.94);
+  }
+
+  .score-btn.selected {
+    background: var(--gold);
+    color: var(--bg-deep);
+    border-color: var(--gold);
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
+  }
+
+  .score-btn.par-marker::after {
+    content: '';
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green-light);
+    opacity: 0.6;
+  }
+
+  .score-btn.selected.par-marker::after {
+    background: var(--bg-deep);
+    opacity: 1;
+  }
+
+  /* Putt grid (smaller, 5 cols) */
+  .putt-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+
+  .putt-grid .score-btn {
+    font-size: 20px;
+    aspect-ratio: 1.2;
+  }
+
+  /* ============ NOTE INPUT ============ */
+  .note-section {
+    padding: 0 20px 16px;
+  }
+
+  .note-input {
+    width: 100%;
+    background: var(--bg-card);
+    border: 1px solid rgba(116, 198, 157, 0.15);
+    border-radius: 12px;
+    padding: 12px 14px;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    user-select: text;
+    -webkit-user-select: text;
+  }
+
+  .note-input::placeholder {
+    color: var(--text-muted);
+  }
+
+  .note-input:focus {
+    border-color: var(--gold);
+  }
+
+  .quick-tags {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+
+  .tag-btn {
+    padding: 6px 12px;
+    background: var(--bg-elev);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    border-radius: 16px;
+    color: var(--gold-soft);
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  .tag-btn.active {
+    background: var(--gold);
+    color: var(--bg-deep);
+    border-color: var(--gold);
+  }
+
+  /* ============ NAV (Hole navigator) ============ */
+  .nav-bar {
+    flex-shrink: 0;
+    padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
+    background: var(--bg-card);
+    border-top: 1px solid rgba(212, 175, 55, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 10;
+  }
+
+  .nav-btn {
+    flex: 0 0 auto;
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    background: var(--bg-elev);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    color: var(--gold);
+    font-size: 22px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .nav-btn:disabled {
+    opacity: 0.3;
+  }
+
+  .nav-progress {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .progress-track {
+    height: 4px;
+    background: var(--bg-elev);
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--green-mid), var(--gold));
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+
+  .progress-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+
+  .progress-info .total-score {
+    color: var(--gold);
+    font-weight: 600;
+    font-family: 'Georgia', serif;
+  }
+
+  /* ============ SUMMARY VIEW ============ */
+  .summary-content {
+    padding: 0 20px 20px;
+  }
+
+  .summary-title {
+    font-family: 'Georgia', serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--gold);
+    margin-bottom: 4px;
+  }
+
+  .summary-subtitle {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+  }
+
+  .stat-card {
+    background: var(--bg-card);
+    border: 1px solid rgba(212, 175, 55, 0.1);
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 12px;
+  }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 8px 0;
+  }
+
+  .stat-row + .stat-row {
+    border-top: 1px solid rgba(212, 175, 55, 0.08);
+  }
+
+  .stat-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .stat-value {
+    font-family: 'Georgia', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--gold);
+  }
+
+  .stat-value.small {
+    font-size: 16px;
+  }
+
+  .stat-value.score-positive {
+    color: var(--score-triple);
+  }
+
+  .stat-value.score-zero {
+    color: var(--green-light);
+  }
+
+  .stat-value.score-negative {
+    color: var(--score-eagle);
+  }
+
+  /* Hole grid in summary */
+  .hole-grid {
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+    gap: 4px;
+    margin-top: 8px;
+  }
+
+  .hole-cell {
+    aspect-ratio: 0.75;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    background: var(--bg-elev);
+    cursor: pointer;
+    padding: 2px;
+  }
+
+  .hole-cell .h-num {
+    font-size: 9px;
+    color: var(--text-muted);
+    line-height: 1;
+  }
+
+  .hole-cell .h-score {
+    font-family: 'Georgia', serif;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .hole-cell.eagle { background: var(--score-eagle); color: white; }
+  .hole-cell.birdie { background: var(--score-birdie); color: var(--bg-deep); }
+  .hole-cell.par { background: var(--score-par); color: var(--bg-deep); }
+  .hole-cell.bogey { background: var(--score-bogey); color: var(--bg-deep); }
+  .hole-cell.double { background: var(--score-double); color: white; }
+  .hole-cell.triple { background: var(--score-triple); color: white; }
+
+  .hole-cell .h-num,
+  .hole-cell.eagle .h-num,
+  .hole-cell.birdie .h-num,
+  .hole-cell.par .h-num,
+  .hole-cell.bogey .h-num,
+  .hole-cell.double .h-num,
+  .hole-cell.triple .h-num {
+    color: inherit;
+    opacity: 0.7;
+  }
+
+  .section-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    margin: 16px 0 8px;
+    padding: 0 4px;
+  }
+
+  .action-btn {
+    width: 100%;
+    padding: 14px;
+    border-radius: 12px;
+    background: var(--gold);
+    color: var(--bg-deep);
+    border: none;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 8px;
+    font-family: inherit;
+  }
+
+  .action-btn.secondary {
+    background: var(--bg-elev);
+    color: var(--gold);
+    border: 1px solid var(--gold);
+  }
+
+  .action-btn.danger {
+    background: transparent;
+    color: var(--score-triple);
+    border: 1px solid var(--score-triple);
+  }
+
+  /* ============ MODAL ============ */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 100;
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+  }
+
+  .modal-overlay.active {
+    display: flex;
+  }
+
+  .modal {
+    width: 100%;
+    max-width: 500px;
+    background: var(--bg-card);
+    border-radius: 24px 24px 0 0;
+    padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
+    box-shadow: var(--shadow-elev);
+  }
+
+  .modal-title {
+    font-family: 'Georgia', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--gold);
+    margin-bottom: 16px;
+  }
+
+  .modal-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+
+  .modal-row label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+  }
+
+  .modal-row input {
+    background: var(--bg-elev);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    border-radius: 10px;
+    padding: 12px;
+    color: var(--text-primary);
+    font-size: 15px;
+    font-family: inherit;
+    outline: none;
+    user-select: text;
+    -webkit-user-select: text;
+  }
+
+  .modal-row input:focus {
+    border-color: var(--gold);
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  .modal-actions button {
+    flex: 1;
+  }
+
+  /* ============ HISTORY VIEW ============ */
+  .history-item {
+    background: var(--bg-card);
+    border: 1px solid rgba(212, 175, 55, 0.1);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+  }
+
+  .history-info .history-course {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--cream);
+  }
+
+  .history-info .history-date {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+
+  .history-score {
+    text-align: right;
+  }
+
+  .history-score .h-total {
+    font-family: 'Georgia', serif;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--gold);
+    line-height: 1;
+  }
+
+  .history-score .h-vspar {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+  }
+
+  .empty-state .icon {
+    font-size: 48px;
+    opacity: 0.4;
+    margin-bottom: 12px;
+  }
+
+  /* ============ TOAST ============ */
+  .toast {
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--bg-elev);
+    color: var(--gold);
+    padding: 12px 20px;
+    border-radius: 24px;
+    border: 1px solid var(--gold);
+    font-size: 13px;
+    font-weight: 600;
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 200;
+    pointer-events: none;
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* ============ TOP TABS ============ */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    padding: 0 20px 8px;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 10px;
+    text-align: center;
+    background: var(--bg-card);
+    border: 1px solid rgba(212, 175, 55, 0.1);
+    border-radius: 10px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .tab.active {
+    background: var(--gold);
+    color: var(--bg-deep);
+    border-color: var(--gold);
+    font-weight: 700;
+  }
+
+  /* Decorative top right accent */
+  .top-accent {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 160px;
+    height: 160px;
+    background: radial-gradient(circle at top right, rgba(212, 175, 55, 0.12), transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Round summary banner inside hole input view */
+  .running-total {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    padding: 8px 20px 12px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .running-total span strong {
+    color: var(--gold);
+    font-family: 'Georgia', serif;
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="top-accent"></div>
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-top">
+      <div class="brand">민재<span class="accent">·</span>골프</div>
+      <button class="menu-btn" onclick="openMenu()">≡</button>
+    </div>
+    <div class="round-info">
+      <span class="round-date" id="roundDate">—</span>
+      <span class="round-course" id="roundCourse">—</span>
+    </div>
+    <div class="tabs">
+      <button class="tab active" data-view="play" onclick="switchView('play')">기록</button>
+      <button class="tab" data-view="summary" onclick="switchView('summary')">요약</button>
+      <button class="tab" data-view="history" onclick="switchView('history')">히스토리</button>
+    </div>
+  </header>
+
+  <!-- VIEW: PLAY (input) -->
+  <main class="view active" id="view-play">
+    <div class="hole-display">
+      <div class="hole-num-label">HOLE</div>
+      <div class="hole-number" id="holeNumber">1</div>
+      <div class="hole-par">
+        PAR <span class="par-num" id="parNum">4</span>
+      </div>
+      <div class="hole-par-edit">
+        <button class="par-btn" onclick="adjustPar(-1)">−</button>
+        <span style="color:var(--text-muted);font-size:11px;">par 조정</span>
+        <button class="par-btn" onclick="adjustPar(1)">+</button>
+      </div>
+    </div>
+
+    <div class="running-total">
+      <span>누적 <strong id="runningScore">0</strong>타</span>
+      <span>vs Par <strong id="runningVsPar">E</strong></span>
+      <span>퍼팅 <strong id="runningPutts">0</strong></span>
+    </div>
+
+    <div class="score-section">
+      <div class="input-label">타수</div>
+      <div class="score-grid" id="scoreGrid"></div>
+
+      <div class="input-label">퍼팅</div>
+      <div class="score-grid putt-grid" id="puttGrid"></div>
+    </div>
+
+    <div class="note-section">
+      <div class="quick-tags" id="quickTags">
+        <button class="tag-btn" data-tag="T">트러블</button>
+        <button class="tag-btn" data-tag="벙커">벙커</button>
+        <button class="tag-btn" data-tag="OB">OB</button>
+        <button class="tag-btn" data-tag="3퍼팅">3퍼팅</button>
+        <button class="tag-btn" data-tag="굿샷">굿샷</button>
+      </div>
+      <input type="text" class="note-input" id="noteInput" placeholder="메모 (선택)" maxlength="80">
+    </div>
+  </main>
+
+  <!-- VIEW: SUMMARY -->
+  <main class="view" id="view-summary">
+    <div class="summary-content">
+      <div class="summary-title">라운드 요약</div>
+      <div class="summary-subtitle" id="summarySubtitle">현재 라운드</div>
+
+      <div class="stat-card">
+        <div class="stat-row">
+          <span class="stat-label">총 타수</span>
+          <span class="stat-value" id="sumTotal">—</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">vs Par</span>
+          <span class="stat-value" id="sumVsPar">—</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">총 퍼팅</span>
+          <span class="stat-value" id="sumPutts">—</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">전반(OUT) / 후반(IN)</span>
+          <span class="stat-value small" id="sumOutIn">—</span>
+        </div>
+      </div>
+
+      <div class="section-title">홀별 결과</div>
+      <div class="hole-grid" id="holeGridOut"></div>
+      <div style="height:6px;"></div>
+      <div class="hole-grid" id="holeGridIn"></div>
+
+      <div class="section-title">스코어 분포</div>
+      <div class="stat-card" id="scoreDistCard"></div>
+
+      <div class="section-title">퍼팅 분포</div>
+      <div class="stat-card" id="puttDistCard"></div>
+
+      <button class="action-btn" onclick="exportCSV()">CSV로 내보내기</button>
+      <button class="action-btn secondary" onclick="finishRound()">라운드 종료 & 저장</button>
+      <button class="action-btn danger" onclick="resetCurrentRound()">현재 라운드 초기화</button>
+    </div>
+  </main>
+
+  <!-- VIEW: HISTORY -->
+  <main class="view" id="view-history">
+    <div class="summary-content">
+      <div class="summary-title">히스토리</div>
+      <div class="summary-subtitle" id="historySubtitle">저장된 라운드</div>
+
+      <div class="stat-card" id="historyAggregate" style="display:none;">
+        <div class="stat-row">
+          <span class="stat-label">평균 스코어</span>
+          <span class="stat-value" id="histAvg">—</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">베스트</span>
+          <span class="stat-value" id="histBest">—</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">평균 퍼팅</span>
+          <span class="stat-value" id="histAvgPutt">—</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">총 라운드 수</span>
+          <span class="stat-value" id="histCount">—</span>
+        </div>
+      </div>
+
+      <div class="section-title">라운드 목록</div>
+      <div id="historyList"></div>
+    </div>
+  </main>
+
+  <!-- BOTTOM NAV (visible on play view only) -->
+  <nav class="nav-bar" id="navBar">
+    <button class="nav-btn" onclick="prevHole()" id="prevBtn">‹</button>
+    <div class="nav-progress">
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <div class="progress-info">
+        <span><span id="navHoleNum">1</span> / 18</span>
+        <span class="total-score"><span id="navTotal">0</span>타 · <span id="navVsPar">E</span></span>
+      </div>
+    </div>
+    <button class="nav-btn" onclick="nextHole()" id="nextBtn">›</button>
+  </nav>
+</div>
+
+<!-- Setup Modal -->
+<div class="modal-overlay" id="setupModal">
+  <div class="modal">
+    <div class="modal-title">새 라운드 시작</div>
+    <div class="modal-row">
+      <label>날짜</label>
+      <input type="date" id="setupDate">
+    </div>
+    <div class="modal-row">
+      <label>코스명</label>
+      <input type="text" id="setupCourse" placeholder="예: 군산CC">
+    </div>
+    <div class="modal-row">
+      <label>대회/메모 (선택)</label>
+      <input type="text" id="setupTitle" placeholder="예: 용인대총장배">
+    </div>
+    <div class="modal-actions">
+      <button class="action-btn secondary" onclick="closeSetup()">취소</button>
+      <button class="action-btn" onclick="startRound()">시작</button>
+    </div>
+  </div>
+</div>
+
+<!-- Menu Modal -->
+<div class="modal-overlay" id="menuModal">
+  <div class="modal">
+    <div class="modal-title">메뉴</div>
+    <button class="action-btn" onclick="newRound()">새 라운드 시작</button>
+    <button class="action-btn secondary" onclick="installPrompt()">홈 화면에 추가하기</button>
+    <button class="action-btn secondary" onclick="exportAllJSON()">전체 데이터 백업</button>
+    <button class="action-btn secondary" onclick="closeMenu()">닫기</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============ STATE ============
+const STORAGE_KEY = 'minjae_golf_data_v1';
+const DEFAULT_PARS = [4,4,4,3,5,4,4,3,5, 4,4,3,4,4,5,4,4,3]; // 18홀 기본값
+
+let state = {
+  currentRound: null,  // { id, date, course, title, holes: [{par, score, putts, note}] }
+  history: [],
+  view: 'play',
+  currentHole: 0,  // 0-indexed (0~17)
+};
+
+// ============ STORAGE ============
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const data = JSON.parse(raw);
+      state.currentRound = data.currentRound || null;
+      state.history = data.history || [];
+    }
+  } catch (e) {
+    console.error('Load failed', e);
+  }
+}
+
+function saveData() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      currentRound: state.currentRound,
+      history: state.history,
+    }));
+  } catch (e) {
+    console.error('Save failed', e);
+    showToast('저장 실패: 저장 공간 확인');
+  }
+}
+
+// ============ ROUND LIFECYCLE ============
+function newRound() {
+  closeMenu();
+  const today = new Date().toISOString().slice(0, 10);
+  document.getElementById('setupDate').value = today;
+  document.getElementById('setupCourse').value = '';
+  document.getElementById('setupTitle').value = '';
+  document.getElementById('setupModal').classList.add('active');
+}
+
+function closeSetup() {
+  document.getElementById('setupModal').classList.remove('active');
+}
+
+function startRound() {
+  const date = document.getElementById('setupDate').value;
+  const course = document.getElementById('setupCourse').value.trim() || '코스 미입력';
+  const title = document.getElementById('setupTitle').value.trim();
+
+  state.currentRound = {
+    id: 'r_' + Date.now(),
+    date, course, title,
+    holes: DEFAULT_PARS.map(par => ({ par, score: null, putts: null, note: '' })),
+    createdAt: Date.now(),
+  };
+  state.currentHole = 0;
+  closeSetup();
+  saveData();
+  renderAll();
+  switchView('play');
+  showToast('라운드 시작 ⛳');
+}
+
+function ensureRound() {
+  if (!state.currentRound) {
+    newRound();
+    return false;
+  }
+  return true;
+}
+
+function finishRound() {
+  if (!state.currentRound) return;
+  if (!confirm('현재 라운드를 히스토리에 저장하고 종료할까요?')) return;
+
+  const round = JSON.parse(JSON.stringify(state.currentRound));
+  round.completedAt = Date.now();
+  state.history.unshift(round);
+  state.currentRound = null;
+  state.currentHole = 0;
+  saveData();
+  renderAll();
+  switchView('history');
+  showToast('라운드 저장 완료');
+}
+
+function resetCurrentRound() {
+  if (!state.currentRound) return;
+  if (!confirm('현재 라운드 데이터를 모두 지울까요? (저장되지 않습니다)')) return;
+  state.currentRound = null;
+  state.currentHole = 0;
+  saveData();
+  renderAll();
+  switchView('play');
+}
+
+// ============ HOLE INPUT ============
+function adjustPar(delta) {
+  if (!ensureRound()) return;
+  const h = state.currentRound.holes[state.currentHole];
+  const newPar = Math.max(3, Math.min(6, h.par + delta));
+  h.par = newPar;
+  saveData();
+  renderHoleInput();
+  renderRunning();
+}
+
+function setScore(value) {
+  if (!ensureRound()) return;
+  const h = state.currentRound.holes[state.currentHole];
+  h.score = (h.score === value) ? null : value;
+  saveData();
+  renderHoleInput();
+  renderRunning();
+  renderNav();
+}
+
+function setPutts(value) {
+  if (!ensureRound()) return;
+  const h = state.currentRound.holes[state.currentHole];
+  h.putts = (h.putts === value) ? null : value;
+  saveData();
+  renderHoleInput();
+  renderRunning();
+}
+
+function setNote(value) {
+  if (!ensureRound()) return;
+  state.currentRound.holes[state.currentHole].note = value;
+  saveData();
+}
+
+function toggleTag(tag) {
+  if (!ensureRound()) return;
+  const h = state.currentRound.holes[state.currentHole];
+  const note = h.note || '';
+  // Toggle tag in note
+  const tagPattern = new RegExp(`(^|\\s)${tag}(\\s|$)`);
+  if (tagPattern.test(note)) {
+    h.note = note.replace(tagPattern, ' ').trim();
+  } else {
+    h.note = (note + ' ' + tag).trim();
+  }
+  document.getElementById('noteInput').value = h.note;
+  saveData();
+  renderQuickTags();
+}
+
+function prevHole() {
+  if (state.currentHole > 0) {
+    state.currentHole--;
+    renderAll();
+  }
+}
+
+function nextHole() {
+  if (state.currentHole < 17) {
+    state.currentHole++;
+    renderAll();
+  } else {
+    switchView('summary');
+  }
+}
+
+// ============ RENDER ============
+function renderHoleInput() {
+  if (!state.currentRound) {
+    document.getElementById('holeNumber').textContent = '—';
+    document.getElementById('parNum').textContent = '—';
+    document.getElementById('roundDate').textContent = '라운드 없음';
+    document.getElementById('roundCourse').textContent = '메뉴 → 새 라운드';
+    document.getElementById('scoreGrid').innerHTML = '';
+    document.getElementById('puttGrid').innerHTML = '';
+    document.getElementById('noteInput').value = '';
+    return;
+  }
+
+  const round = state.currentRound;
+  const idx = state.currentHole;
+  const hole = round.holes[idx];
+
+  document.getElementById('holeNumber').textContent = idx + 1;
+  document.getElementById('parNum').textContent = hole.par;
+  document.getElementById('roundDate').textContent = formatDate(round.date);
+  document.getElementById('roundCourse').textContent = round.course;
+
+  // Score buttons (Par-2 ~ Par+5, but show 1~10 reasonable range)
+  const scoreGrid = document.getElementById('scoreGrid');
+  scoreGrid.innerHTML = '';
+  // Show range from max(1, par-2) to par+5
+  const minScore = Math.max(1, hole.par - 1);
+  const maxScore = hole.par + 5;
+  const scores = [];
+  for (let i = minScore; i <= maxScore; i++) scores.push(i);
+  scores.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'score-btn';
+    if (s === hole.par) btn.classList.add('par-marker');
+    if (hole.score === s) btn.classList.add('selected');
+    btn.textContent = s;
+    btn.onclick = () => setScore(s);
+    scoreGrid.appendChild(btn);
+  });
+
+  // Putt buttons (0~5)
+  const puttGrid = document.getElementById('puttGrid');
+  puttGrid.innerHTML = '';
+  for (let p = 0; p <= 4; p++) {
+    const btn = document.createElement('button');
+    btn.className = 'score-btn';
+    if (hole.putts === p) btn.classList.add('selected');
+    btn.textContent = p;
+    btn.onclick = () => setPutts(p);
+    puttGrid.appendChild(btn);
+  }
+
+  // Note
+  document.getElementById('noteInput').value = hole.note || '';
+
+  renderQuickTags();
+}
+
+function renderQuickTags() {
+  if (!state.currentRound) return;
+  const note = state.currentRound.holes[state.currentHole].note || '';
+  document.querySelectorAll('.tag-btn').forEach(btn => {
+    const tag = btn.dataset.tag;
+    const tagPattern = new RegExp(`(^|\\s)${tag}(\\s|$)`);
+    btn.classList.toggle('active', tagPattern.test(note));
+  });
+}
+
+function renderRunning() {
+  if (!state.currentRound) {
+    document.getElementById('runningScore').textContent = '0';
+    document.getElementById('runningVsPar').textContent = 'E';
+    document.getElementById('runningPutts').textContent = '0';
+    return;
+  }
+  let totalScore = 0, totalPar = 0, totalPutts = 0;
+  state.currentRound.holes.forEach(h => {
+    if (h.score != null) {
+      totalScore += h.score;
+      totalPar += h.par;
+    }
+    if (h.putts != null) totalPutts += h.putts;
+  });
+  document.getElementById('runningScore').textContent = totalScore;
+  document.getElementById('runningPutts').textContent = totalPutts;
+  const diff = totalScore - totalPar;
+  document.getElementById('runningVsPar').textContent = diff === 0 ? 'E' : (diff > 0 ? '+' + diff : diff);
+}
+
+function renderNav() {
+  if (!state.currentRound) {
+    document.getElementById('navHoleNum').textContent = '—';
+    document.getElementById('navTotal').textContent = '0';
+    document.getElementById('navVsPar').textContent = 'E';
+    document.getElementById('progressFill').style.width = '0%';
+    document.getElementById('prevBtn').disabled = true;
+    document.getElementById('nextBtn').disabled = true;
+    return;
+  }
+  const idx = state.currentHole;
+  document.getElementById('navHoleNum').textContent = idx + 1;
+  let totalScore = 0, totalPar = 0, holesPlayed = 0;
+  state.currentRound.holes.forEach(h => {
+    if (h.score != null) {
+      totalScore += h.score;
+      totalPar += h.par;
+      holesPlayed++;
+    }
+  });
+  document.getElementById('navTotal').textContent = totalScore;
+  const diff = totalScore - totalPar;
+  document.getElementById('navVsPar').textContent = diff === 0 ? 'E' : (diff > 0 ? '+' + diff : diff);
+  document.getElementById('progressFill').style.width = (holesPlayed / 18 * 100) + '%';
+  document.getElementById('prevBtn').disabled = idx === 0;
+}
+
+function renderSummary() {
+  const round = state.currentRound;
+  if (!round) {
+    document.getElementById('summarySubtitle').textContent = '활성 라운드 없음 - 새 라운드를 시작하세요';
+    document.getElementById('sumTotal').textContent = '—';
+    document.getElementById('sumVsPar').textContent = '—';
+    document.getElementById('sumPutts').textContent = '—';
+    document.getElementById('sumOutIn').textContent = '—';
+    document.getElementById('holeGridOut').innerHTML = '';
+    document.getElementById('holeGridIn').innerHTML = '';
+    document.getElementById('scoreDistCard').innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:20px;">데이터 없음</div>';
+    document.getElementById('puttDistCard').innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:20px;">데이터 없음</div>';
+    return;
+  }
+
+  document.getElementById('summarySubtitle').textContent =
+    `${formatDate(round.date)} · ${round.course}${round.title ? ' · ' + round.title : ''}`;
+
+  let totalScore = 0, totalPar = 0, totalPutts = 0;
+  let outScore = 0, outPar = 0, inScore = 0, inPar = 0;
+  let scoreDist = { eagle: 0, birdie: 0, par: 0, bogey: 0, double: 0, triple: 0 };
+  let puttDist = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0 };
+
+  round.holes.forEach((h, i) => {
+    if (h.score != null) {
+      totalScore += h.score;
+      totalPar += h.par;
+      if (i < 9) { outScore += h.score; outPar += h.par; }
+      else { inScore += h.score; inPar += h.par; }
+      const diff = h.score - h.par;
+      if (diff <= -2) scoreDist.eagle++;
+      else if (diff === -1) scoreDist.birdie++;
+      else if (diff === 0) scoreDist.par++;
+      else if (diff === 1) scoreDist.bogey++;
+      else if (diff === 2) scoreDist.double++;
+      else scoreDist.triple++;
+    }
+    if (h.putts != null) {
+      totalPutts += h.putts;
+      if (h.putts >= 4) puttDist[4]++;
+      else puttDist[h.putts]++;
+    }
+  });
+
+  document.getElementById('sumTotal').textContent = totalScore || '0';
+  const vsPar = totalScore - totalPar;
+  const sumVsParEl = document.getElementById('sumVsPar');
+  sumVsParEl.textContent = vsPar === 0 ? 'E' : (vsPar > 0 ? '+' + vsPar : vsPar);
+  sumVsParEl.className = 'stat-value ' + (vsPar > 0 ? 'score-positive' : vsPar === 0 ? 'score-zero' : 'score-negative');
+  document.getElementById('sumPutts').textContent = totalPutts;
+  const outDiff = outScore - outPar;
+  const inDiff = inScore - inPar;
+  document.getElementById('sumOutIn').textContent =
+    `${outScore || '—'} (${formatDiff(outDiff)}) / ${inScore || '—'} (${formatDiff(inDiff)})`;
+
+  // Hole grids
+  const outGrid = document.getElementById('holeGridOut');
+  const inGrid = document.getElementById('holeGridIn');
+  outGrid.innerHTML = '';
+  inGrid.innerHTML = '';
+  round.holes.forEach((h, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'hole-cell';
+    if (h.score != null) {
+      const d = h.score - h.par;
+      if (d <= -2) cell.classList.add('eagle');
+      else if (d === -1) cell.classList.add('birdie');
+      else if (d === 0) cell.classList.add('par');
+      else if (d === 1) cell.classList.add('bogey');
+      else if (d === 2) cell.classList.add('double');
+      else cell.classList.add('triple');
+    }
+    cell.innerHTML = `<span class="h-num">${i+1}</span><span class="h-score">${h.score != null ? h.score : '·'}</span>`;
+    cell.onclick = () => { state.currentHole = i; switchView('play'); };
+    if (i < 9) outGrid.appendChild(cell); else inGrid.appendChild(cell);
+  });
+
+  // Score dist
+  const sdc = document.getElementById('scoreDistCard');
+  sdc.innerHTML = '';
+  const distItems = [
+    ['이글 이상', scoreDist.eagle, 'var(--score-eagle)'],
+    ['버디', scoreDist.birdie, 'var(--score-birdie)'],
+    ['파', scoreDist.par, 'var(--score-par)'],
+    ['보기', scoreDist.bogey, 'var(--score-bogey)'],
+    ['더블보기', scoreDist.double, 'var(--score-double)'],
+    ['트리플 이상', scoreDist.triple, 'var(--score-triple)'],
+  ];
+  distItems.forEach(([label, count, color]) => {
+    const row = document.createElement('div');
+    row.className = 'stat-row';
+    row.innerHTML = `<span class="stat-label"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${color};margin-right:8px;vertical-align:middle;"></span>${label}</span><span class="stat-value small">${count}</span>`;
+    sdc.appendChild(row);
+  });
+
+  // Putt dist
+  const pdc = document.getElementById('puttDistCard');
+  pdc.innerHTML = '';
+  const puttItems = [
+    ['0퍼팅 (칩인)', puttDist[0]],
+    ['1퍼팅', puttDist[1]],
+    ['2퍼팅', puttDist[2]],
+    ['3퍼팅', puttDist[3]],
+    ['4퍼팅 이상', puttDist[4]],
+  ];
+  puttItems.forEach(([label, count]) => {
+    const row = document.createElement('div');
+    row.className = 'stat-row';
+    row.innerHTML = `<span class="stat-label">${label}</span><span class="stat-value small">${count}</span>`;
+    pdc.appendChild(row);
+  });
+}
+
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  list.innerHTML = '';
+
+  const aggCard = document.getElementById('historyAggregate');
+  if (state.history.length === 0) {
+    aggCard.style.display = 'none';
+    list.innerHTML = '<div class="empty-state"><div class="icon">⛳</div><div>저장된 라운드가 없습니다</div><div style="font-size:12px;margin-top:8px;">라운드 종료 시 자동 저장됩니다</div></div>';
+    return;
+  }
+
+  // Aggregate stats
+  let totalSum = 0, bestScore = Infinity, bestRound = null, totalPutts = 0;
+  state.history.forEach(r => {
+    let sum = 0, putts = 0;
+    r.holes.forEach(h => {
+      if (h.score != null) sum += h.score;
+      if (h.putts != null) putts += h.putts;
+    });
+    totalSum += sum;
+    totalPutts += putts;
+    if (sum > 0 && sum < bestScore) {
+      bestScore = sum;
+      bestRound = r;
+    }
+  });
+  aggCard.style.display = 'block';
+  document.getElementById('histAvg').textContent = (totalSum / state.history.length).toFixed(1);
+  document.getElementById('histBest').textContent = bestScore === Infinity ? '—' : bestScore;
+  document.getElementById('histAvgPutt').textContent = (totalPutts / state.history.length).toFixed(1);
+  document.getElementById('histCount').textContent = state.history.length;
+
+  // List
+  state.history.forEach(r => {
+    let sum = 0, par = 0;
+    r.holes.forEach(h => {
+      if (h.score != null) { sum += h.score; par += h.par; }
+    });
+    const diff = sum - par;
+    const item = document.createElement('div');
+    item.className = 'history-item';
+    item.innerHTML = `
+      <div class="history-info">
+        <div class="history-course">${r.course}</div>
+        <div class="history-date">${formatDate(r.date)}${r.title ? ' · ' + r.title : ''}</div>
+      </div>
+      <div class="history-score">
+        <div class="h-total">${sum}</div>
+        <div class="h-vspar">${formatDiff(diff)}</div>
+      </div>
+    `;
+    item.onclick = () => loadHistoryRound(r.id);
+    list.appendChild(item);
+  });
+}
+
+function loadHistoryRound(id) {
+  const round = state.history.find(r => r.id === id);
+  if (!round) return;
+  if (state.currentRound) {
+    if (!confirm('현재 진행 중인 라운드가 있습니다. 히스토리 라운드를 보면 현재 라운드는 저장되지 않습니다. 계속하시겠습니까?')) return;
+  }
+  // Make a working copy
+  state.currentRound = JSON.parse(JSON.stringify(round));
+  state.currentRound.id = 'r_' + Date.now(); // 새 ID로
+  state.currentHole = 0;
+  saveData();
+  renderAll();
+  switchView('summary');
+  showToast('히스토리 라운드를 불러왔습니다');
+}
+
+// ============ VIEW SWITCHING ============
+function switchView(view) {
+  state.view = view;
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('view-' + view).classList.add('active');
+  document.querySelector(`.tab[data-view="${view}"]`).classList.add('active');
+  document.getElementById('navBar').style.display = view === 'play' ? 'flex' : 'none';
+
+  if (view === 'summary') renderSummary();
+  if (view === 'history') renderHistory();
+}
+
+// ============ MENU ============
+function openMenu() {
+  document.getElementById('menuModal').classList.add('active');
+}
+
+function closeMenu() {
+  document.getElementById('menuModal').classList.remove('active');
+}
+
+// ============ EXPORT ============
+function exportCSV() {
+  if (!state.currentRound) {
+    showToast('라운드 데이터가 없습니다');
+    return;
+  }
+  const r = state.currentRound;
+  const rows = [
+    ['홀', 'Par', '타수', '퍼팅', '샷', 'vs Par', '메모'],
+  ];
+  r.holes.forEach((h, i) => {
+    rows.push([
+      i+1, h.par,
+      h.score ?? '',
+      h.putts ?? '',
+      (h.score != null && h.putts != null) ? (h.score - h.putts) : '',
+      h.score != null ? (h.score - h.par) : '',
+      h.note || ''
+    ]);
+  });
+  // Totals
+  let tScore = 0, tPar = 0, tPutts = 0;
+  r.holes.forEach(h => {
+    if (h.score != null) { tScore += h.score; tPar += h.par; }
+    if (h.putts != null) tPutts += h.putts;
+  });
+  rows.push(['합계', tPar, tScore, tPutts, tScore - tPutts, tScore - tPar, '']);
+
+  const csv = '\ufeff' + rows.map(row =>
+    row.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')
+  ).join('\n');
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `golf_${r.date}_${r.course}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('CSV 다운로드 완료');
+}
+
+function exportAllJSON() {
+  const data = JSON.stringify({
+    currentRound: state.currentRound,
+    history: state.history,
+    exportedAt: new Date().toISOString()
+  }, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `golf_backup_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  closeMenu();
+  showToast('백업 다운로드 완료');
+}
+
+// ============ INSTALL PROMPT ============
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+});
+
+function installPrompt() {
+  closeMenu();
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
+  } else {
+    // iOS or already installed
+    alert('홈 화면에 추가하기:\n\n• iPhone (Safari): 공유 버튼 → "홈 화면에 추가"\n• Android (Chrome): 메뉴 → "홈 화면에 추가"\n\n홈 화면에 추가하면 앱처럼 사용할 수 있습니다.');
+  }
+}
+
+// ============ HELPERS ============
+function formatDate(d) {
+  if (!d) return '—';
+  const dt = new Date(d);
+  return `${dt.getFullYear()}.${String(dt.getMonth()+1).padStart(2,'0')}.${String(dt.getDate()).padStart(2,'0')}`;
+}
+
+function formatDiff(d) {
+  if (d === 0) return 'E';
+  return d > 0 ? '+' + d : String(d);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+function renderAll() {
+  renderHoleInput();
+  renderRunning();
+  renderNav();
+  if (state.view === 'summary') renderSummary();
+  if (state.view === 'history') renderHistory();
+}
+
+// ============ EVENT BINDINGS ============
+document.getElementById('noteInput').addEventListener('input', (e) => setNote(e.target.value));
+document.querySelectorAll('.tag-btn').forEach(btn => {
+  btn.addEventListener('click', () => toggleTag(btn.dataset.tag));
+});
+
+// Swipe navigation on play view
+let touchStartX = 0;
+document.getElementById('view-play').addEventListener('touchstart', (e) => {
+  touchStartX = e.touches[0].clientX;
+});
+document.getElementById('view-play').addEventListener('touchend', (e) => {
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  if (Math.abs(dx) > 80) {
+    if (dx < 0) nextHole();
+    else prevHole();
+  }
+});
+
+// ============ INIT ============
+loadData();
+renderAll();
+
+// First-time user
+if (!state.currentRound && state.history.length === 0) {
+  setTimeout(() => newRound(), 300);
+}
+</script>
+
+</body>
+</html>
